@@ -1,5 +1,6 @@
 package tech.devinhouse.veiculos.controller;
 
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,9 +10,8 @@ import tech.devinhouse.veiculos.dto.MultaRequest;
 import tech.devinhouse.veiculos.dto.MultaResponse;
 import tech.devinhouse.veiculos.dto.VeiculoRequest;
 import tech.devinhouse.veiculos.dto.VeiculoResponse;
-import tech.devinhouse.veiculos.models.Multa;
-import tech.devinhouse.veiculos.models.TipoVeiculo;
-import tech.devinhouse.veiculos.models.Veiculo;
+import tech.devinhouse.veiculos.models.*;
+import tech.devinhouse.veiculos.service.UsuarioService;
 import tech.devinhouse.veiculos.service.VeiculoService;
 
 import java.net.URI;
@@ -26,9 +26,13 @@ public class VeiculoController {
   private VeiculoService veiculoService;
 
   @Autowired
+  private UsuarioService usuarioService;
+
+  @Autowired
   private ModelMapper mapper;
 
   @GetMapping
+  @RolesAllowed( {"ADMIN","USUARIO"} )
   public ResponseEntity<List<VeiculoResponse>> consultar(){
     var veiculos = veiculoService.findAll();
     var resp = new ArrayList<VeiculoResponse>();
@@ -44,6 +48,7 @@ public class VeiculoController {
   }
 
   @GetMapping("/{placa}")
+  @RolesAllowed( {"ADMIN","USUARIO"} )
   public ResponseEntity<VeiculoResponse> consultar(@PathVariable ("placa") String placa){
     Veiculo veiculo = veiculoService.findByPlaca(placa);
     var resp = mapper.map(veiculo, VeiculoResponse.class);
@@ -57,6 +62,7 @@ public class VeiculoController {
   }
 
   @PostMapping
+  @RolesAllowed("ADMIN")
   public ResponseEntity<VeiculoResponse> cadastrarVeiculo(@RequestBody @Valid VeiculoRequest request) {
     var veiculo = mapper.map(request, Veiculo.class);
     veiculo = veiculoService.save(veiculo);
@@ -65,6 +71,7 @@ public class VeiculoController {
   }
 
   @PostMapping("/{placa}/multas")
+  @RolesAllowed("ADMIN")
   public ResponseEntity<MultaResponse> cadastrarMulta(@PathVariable("placa") String placa,@RequestBody @Valid MultaRequest request) {
     var multa = mapper.map(request, Multa.class);
     multa = veiculoService.createMulta(placa, multa);
@@ -88,9 +95,15 @@ public class VeiculoController {
       veiculoService.createMulta(veiculo2.getPlaca(),multa1Veic2);
     }
 
+    var usuarios = usuarioService.consultar();
+    if (usuarios.isEmpty()) {
+      usuarioService.inserir(new Usuario("James Kirk", "james@enterprise.com", "123456", Role.ADMIN));
+      usuarioService.inserir(new Usuario("Spock", "spock@enterprise.com", "123456", Role.ADMIN));
+      usuarioService.inserir(new Usuario("Leonard McCoy", "mccoy@enterprise.com", "123456", Role.USUARIO));
+      usuarioService.inserir(new Usuario("Montgomery Scott", "scott@enterprise.com", "123456", Role.USUARIO));
+    }
     return ResponseEntity.ok().build();
+
   }
-
-
 
 }
